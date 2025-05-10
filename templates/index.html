@@ -20,6 +20,7 @@
             height: 480px; /* Match the frame resize height in app.py */
             border: 5px solid #333;
             background-color: #000;
+            position: relative;
         }
         img {
             width: 100%;
@@ -29,15 +30,92 @@
         p {
             font-size: 1.1em;
         }
+        #status-container {
+            margin: 20px auto;
+            padding: 15px;
+            width: 640px;
+            background-color: #fff;
+            border: 2px solid #333;
+            border-radius: 5px;
+            text-align: left;
+        }
+        .alert {
+            display: inline-block;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .alert.active {
+            background-color: #ff5555;
+            color: white;
+        }
+        .alert.inactive {
+            background-color: #55aa55;
+            color: white;
+        }
+        .fps-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #55ff55;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px black;
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
     <h1>Driver Drowsiness Detection</h1>
-    <p>The system is now monitoring...</p>
+    <p>系统正在监控中...</p>
     <div id="video-container">
         <img src="{{ url_for('video_feed') }}" alt="Video Stream">
+        <div class="fps-display" id="fps-display">FPS: 0.00</div>
     </div>
-    <p>If you see this text, the video stream should be active above. Alerts for drowsiness or yawning will be audible.</p>
+    
+    <div id="status-container">
+        <h3>系统状态</h3>
+        <div id="drowsy-alert" class="alert inactive">瞌睡警报：未检测到</div>
+        <div id="yawn-alert" class="alert inactive">打哈欠警报：未检测到</div>
+        <div>帧率：<span id="fps-value">0.00</span> FPS</div>
+    </div>
+
+    <script>
+        // 定期从服务器获取状态
+        function updateStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    // 更新FPS显示
+                    document.getElementById('fps-display').textContent = `FPS: ${data.fps}`;
+                    document.getElementById('fps-value').textContent = data.fps;
+                    
+                    // 更新瞌睡警报状态
+                    const drowsyAlert = document.getElementById('drowsy-alert');
+                    if (data.drowsy_alert) {
+                        drowsyAlert.className = 'alert active';
+                        drowsyAlert.textContent = '瞌睡警报：已检测到！';
+                    } else {
+                        drowsyAlert.className = 'alert inactive';
+                        drowsyAlert.textContent = '瞌睡警报：未检测到';
+                    }
+                    
+                    // 更新打哈欠警报状态
+                    const yawnAlert = document.getElementById('yawn-alert');
+                    if (data.yawn_alert) {
+                        yawnAlert.className = 'alert active';
+                        yawnAlert.textContent = '打哈欠警报：已检测到！';
+                    } else {
+                        yawnAlert.className = 'alert inactive';
+                        yawnAlert.textContent = '打哈欠警报：未检测到';
+                    }
+                })
+                .catch(error => console.error('获取状态失败:', error));
+        }
+        
+        // 每500毫秒更新一次状态
+        setInterval(updateStatus, 500);
+    </script>
     <!-- 
         Future improvements:
         - Buttons to start/stop detection.

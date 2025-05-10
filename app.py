@@ -27,6 +27,7 @@ YAWN_COUNTER = 0  # Renamed from YARN_FRAME for clarity
 alarm_status = False
 alarm_status2 = False
 saying = False # To prevent overlapping sounds, though this might need a more robust solution
+fps = 0 # 添加帧率变量
 
 # Load models
 print("-> Loading the predictor and detector...")
@@ -83,15 +84,31 @@ def play_alarm(sound_type):
 
 
 def generate_frames():
-    global COUNTER, YAWN_COUNTER, alarm_status, alarm_status2, saying
+    global COUNTER, YAWN_COUNTER, alarm_status, alarm_status2, saying, fps
+    
+    # 帧率计算相关变量
+    frame_count = 0
+    start_time = time.time()
 
     while True:
         frame = vs.read()
         frame = cv2.resize(frame, (640, 480)) # Standardized resize
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # 更新帧率计算
+        frame_count += 1
+        elapsed_time = time.time() - start_time
+        if elapsed_time > 1.0:  # 每秒更新一次帧率
+            fps = frame_count / elapsed_time
+            frame_count = 0
+            start_time = time.time()
+        
         rects = detector.detectMultiScale(gray, scaleFactor=1.1,
                                           minNeighbors=5, minSize=(30, 30),
                                           flags=cv2.CASCADE_SCALE_IMAGE)
+
+        drowsy_alert = False
+        yawn_alert = False
 
         for (x, y, w, h) in rects:
             rect = dlib.rectangle(int(x), int(y), int(x + w), int(y + h))
@@ -126,6 +143,7 @@ def generate_frames():
                         thread.start()
                     cv2.putText(frame, "DROWSINESS ALERT!", (10, 30),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    drowsy_alert = True
             else:
                 COUNTER = 0
                 alarm_status = False
@@ -140,6 +158,7 @@ def generate_frames():
                         thread.start()
                     cv2.putText(frame, "YAWN ALERT!", (10, 60), # Adjusted position
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    yawn_alert = True
             else:
                 YAWN_COUNTER = 0
                 alarm_status2 = False
@@ -149,6 +168,10 @@ def generate_frames():
             cv2.putText(frame, f"YAWN: {distance:.2f}", (frame.shape[1] - 150, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
+        # 在视频帧上显示FPS
+        cv2.putText(frame, f"FPS: {fps:.2f}", (10, frame.shape[0] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    
         # Encode frame as JPEG
         (flag, encodedImage) = cv2.imencode(".jpg", frame)
         if not flag:
@@ -164,6 +187,15 @@ def index():
 def video_feed():
     return Response(generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/status')
+def status():
+    global fps, alarm_status, alarm_status2
+    return {
+        'fps': round(fps, 2),
+        'drowsy_alert': alarm_status,
+        'yawn_alert': alarm_status2
+    }
 
 if __name__ == '__main__':
     # The host '0.0.0.0' makes the server accessible from other devices on the network,
