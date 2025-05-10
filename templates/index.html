@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Driver Drowsiness Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        #video-container {
+            margin: 20px auto;
+            width: 640px; /* Match the frame resize width in app.py */
+            height: 480px; /* Match the frame resize height in app.py */
+            border: 5px solid #333;
+            background-color: #000;
+        }
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        p {
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Driver Drowsiness Detection</h1>
+    <p>The system is now monitoring...</p>
+    <div id="video-container">
+        <img src="{{ url_for('video_feed') }}" alt="Video Stream">
+    </div>
+    <p>If you see this text, the video stream should be active above. Alerts for drowsiness or yawning will be audible.</p>
+    <!-- 
+        Future improvements:
+        - Buttons to start/stop detection.
+        - Display status messages (e.g., "Drowsiness Detected!", "Yawn Detected!") on the page.
+        - Client-side sound playback for alerts for better web compatibility.
+    -->
+</body>
+</html> 
